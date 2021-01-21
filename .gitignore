@@ -1,0 +1,7 @@
+# ignore emacs backup files:
+*~
+
+# ignore build directories and generated binaries:
+build
+*.o
+*.so
