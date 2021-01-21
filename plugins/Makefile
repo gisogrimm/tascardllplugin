@@ -51,8 +51,8 @@ clean:
 $(PREFIX)/lib/%: build/%
 	cp $< $@
 
-build/%.so: src/%.cc
-	$(CXX) -shared -fpic -o $@ $^ $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+build/%.so: src/%.cc $(wildcard src/*.h)
+	$(CXX) -shared -fpic -o $@ $< $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
 
 %.validated: %.tsc $(BUILDMODS)
 	LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:$(PWD)/build tascar_validatetsc $< || (echo "$(<):1:";false)
