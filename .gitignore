@@ -5,3 +5,6 @@
 build
 *.o
 *.so
+
+# generated documentation
+html

@@ -72,6 +72,11 @@ testjack:
 
 clean:
 
+.PHONY: doc
+
+doc:
+	cd doc && doxygen doxygen.cfg
+
 
 # Local Variables:
 # compile-command: "make"
