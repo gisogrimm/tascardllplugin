@@ -24,7 +24,7 @@ noise_t::noise_t(const TASCAR::audioplugin_cfg_t& cfg)
     : audioplugin_base_t(cfg), a(0.001)
 {
   // register variable for XML access:
-  GET_ATTRIBUTE_DBSPL(a);
+  GET_ATTRIBUTE_DBSPL(a,"noise level");
 }
 
 noise_t::~noise_t() {}
