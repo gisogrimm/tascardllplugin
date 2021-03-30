@@ -36,6 +36,8 @@ BUILDMODS = $(patsubst %,build/%.so,$(MODULES))
 # install targets:
 INSTMODS = $(patsubst %,$(PREFIX)/lib/%.so,$(MODULES))
 
+OBJECTS = build/netaudio.o
+
 modules: $(BUILDMODS)
 
 install: $(INSTMODS)
@@ -51,8 +53,11 @@ clean:
 $(PREFIX)/lib/%: build/%
 	cp $< $@
 
-build/%.so: src/%.cc $(wildcard src/*.h)
-	$(CXX) -shared -fpic -o $@ $< $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+build/%.o: src/%.cc $(wildcard src/*.h)
+	$(CXX) -o $@ -c $< $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+
+build/%.so: src/%.cc $(wildcard src/*.h) $(OBJECTS)
+	$(CXX) -shared -fpic -o $@ $< $(OBJECTS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
 
 %.validated: %.tsc $(BUILDMODS)
 	LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:$(PWD)/build tascar_validatetsc $< || (echo "$(<):1:";false)
