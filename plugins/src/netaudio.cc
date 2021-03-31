@@ -90,13 +90,31 @@ netaudio_info_t new_netaudio_info(double srate, samplefmt_t samplefmt,
 size_t encode_header(const netaudio_info_t& info, char* data, size_t len,
                      netaudio_err_t& err)
 {
-  err = netaudio_generic_error;
-  return 0;
+  if( !data ){
+    err = netaudio_invalid_pointer;
+    return 0u;
+  }
+  if( len < sizeof(netaudio_info_t)+1 ){
+    err = netaudio_unsufficient_memory;
+    return 0u;
+  }
+  data[0] = 1;
+  memcpy(&(data[1]),&info,sizeof(netaudio_info_t));
+  err = netaudio_success;
+  return 0u;
 }
 
 size_t decode_header(netaudio_info_t& info, const char* data, size_t len,
                      netaudio_err_t& err)
 {
+  if( !data ){
+    err = netaudio_invalid_pointer;
+    return 0u;
+  }
+  if( len < sizeof(netaudio_info_t)+1 ){
+    err = netaudio_unsufficient_memory;
+    return 0u;
+  }
   err = netaudio_generic_error;
   return 0;
 }

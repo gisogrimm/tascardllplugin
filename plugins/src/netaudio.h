@@ -28,6 +28,7 @@ enum netaudio_err_t {
   netaudio_success,
   netaudio_generic_error,
   netaudio_unsufficient_memory,
+  netaudio_invalid_pointer,
   netaudio_not_a_header,
   netaudio_no_audiochunk,
   netaudio_unsupported_protocol_version,
@@ -43,8 +44,8 @@ struct netaudio_info_t {
   float srate;           ///< sampling rate in Hz
   uint16_t channels;     ///< number of channels
   uint16_t fragsize;     ///< number of samples per audio chunk
-  uint32_t chksum;       ///<  check sum generated during compilation, see
-                         ///<  new_netaudio_info() for details.
+  uint32_t chksum;       ///< check sum generated during compilation, see
+                         ///< new_netaudio_info() for details.
 };
 
 static_assert(sizeof(netaudio_info_t) == 16,
@@ -77,9 +78,10 @@ netaudio_info_t new_netaudio_info(double srate, samplefmt_t samplefmt,
  * @param[out] err Error code in case of failure.
  * @return Number of bytes written, or zero in case of failure.
  *
- * This function may fail with the error code
- * netaudio_unsufficient_memory if the size of the memory area is not
- * large enough to store the encoded header.
+ * This function may fail with these error codes:
+ * - netaudio_invalid_pointer: the data pointer is not valid
+ * - netaudio_unsufficient_memory: the size of the memory area is not
+ *   large enough to store the encoded header
  */
 size_t encode_header(const netaudio_info_t& info, char* data, size_t len,
                      netaudio_err_t& err);
@@ -93,13 +95,14 @@ size_t encode_header(const netaudio_info_t& info, char* data, size_t len,
  * @param[out] err Error code in case of failure
  * @return Number of Bytes used to decode parameter, or zero in case of failure.
  *
- * This function may fail with the error code
- * netaudio_unsufficient_memory if the size of the memory area is not
- * large enough to read an encoded header, with netaudio_not_a_header
- * if the data is not containing a netaudio info structure, or with
- * netaudio_unsupported_protocol_version if the protocol id is not
- * supported, or with netaudio_invalid_checksum if the checksum is
- * invalid.
+ * This function may fail with these error codes:
+ * - netaudio_invalid_pointer: the data pointer is not valid
+ * - netaudio_unsufficient_memory: the size of the memory area is not
+ *   large enough to read an encoded header
+ * - netaudio_not_a_header: the data is not containing a netaudio info structure
+ * - netaudio_unsupported_protocol_version: the protocol id is not
+ *   supported
+ * - netaudio_invalid_checksum: the checksum is invalid.
  */
 size_t decode_header(netaudio_info_t& info, const char* data, size_t len,
                      netaudio_err_t& err);
