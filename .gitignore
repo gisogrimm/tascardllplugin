@@ -8,3 +8,8 @@ build
 
 # generated documentation
 html
+
+# google test
+googletest
+*.gcda
+*.gcno

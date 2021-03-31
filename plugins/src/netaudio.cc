@@ -78,6 +78,12 @@ netaudio_info_t new_netaudio_info(double srate, samplefmt_t samplefmt,
 {
   netaudio_info_t info;
   memset(&info, 0, sizeof(info));
+  info.id = 1;
+  info.srate = srate;
+  info.samplefmt = samplefmt;
+  info.channels = channels;
+  info.fragsize = fragsize;
+  info.chksum = gen_crc32b((uint8_t*)(&info),sizeof(info));
   return info;
 }
 
