@@ -154,16 +154,8 @@ size_t encode_audio(const netaudio_info_t& info, const float* audio,
     err = netaudio_invalid_buffer_dimensions;
     return 0u;
   }
-  size_t requiredlen;
-  switch(info.samplefmt) {
-  case pcm16bit:
-    requiredlen = num_elem * sizeof(int16_t);
-    break;
-  case pcmfloat:
-    requiredlen = num_elem * sizeof(float);
-    break;
-  }
-  if(len < requiredlen + 1 + sizeof(info.chksum)) {
+  size_t requiredlen(get_buffer_length(info));
+  if(len < requiredlen) {
     err = netaudio_unsufficient_memory;
     return 0u;
   }
@@ -183,15 +175,70 @@ size_t encode_audio(const netaudio_info_t& info, const float* audio,
     break;
   }
   err = netaudio_success;
-  return requiredlen + 1 + sizeof(info.chksum);
+  return requiredlen;
 }
 
 size_t decode_audio(const netaudio_info_t& info, float* audio, size_t num_elem,
                     size_t& sample_index, const char* data, size_t len,
                     netaudio_err_t& err)
 {
-  err = netaudio_generic_error;
-  return 0;
+  if(!audio) {
+    err = netaudio_invalid_pointer;
+    return 0u;
+  }
+  if(!data) {
+    err = netaudio_invalid_pointer;
+    return 0u;
+  }
+  if(num_elem != info.fragsize * info.channels) {
+    err = netaudio_invalid_buffer_dimensions;
+    return 0u;
+  }
+  size_t requiredlen(get_buffer_length(info));
+  if(len < requiredlen) {
+    err = netaudio_unsufficient_memory;
+    return 0u;
+  }
+  if(data[0] != NETAUDIO_AUDIO) {
+    err = netaudio_no_audiochunk;
+    return 0u;
+  }
+  uint32_t chksum;
+  memcpy(&chksum, &(data[1]), sizeof(chksum));
+  if(chksum != info.chksum) {
+    err = netaudio_invalid_checksum;
+    return 0u;
+  }
+  data += 1 + sizeof(chksum);
+  switch(info.samplefmt) {
+  case pcm16bit:
+    for(size_t k = 0; k < num_elem; ++k) {
+      int16_t v;
+      memcpy(&v, data, sizeof(int16_t));
+      audio[k] = v * (1.0f / ((1 << 15) - 1));
+      data += sizeof(int16_t);
+    }
+    break;
+  case pcmfloat:
+    memcpy(audio, data, sizeof(float) * num_elem);
+    break;
+  }
+  err = netaudio_success;
+  return requiredlen;
+}
+
+size_t get_buffer_length(const netaudio_info_t& info)
+{
+  size_t requiredlen;
+  switch(info.samplefmt) {
+  case pcm16bit:
+    requiredlen = info.channels * info.fragsize * sizeof(int16_t);
+    break;
+  case pcmfloat:
+    requiredlen = info.channels * info.fragsize * sizeof(float);
+    break;
+  }
+  return requiredlen + 1 + sizeof(info.chksum);
 }
 
 /*

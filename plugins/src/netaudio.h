@@ -133,7 +133,8 @@ size_t encode_audio(const netaudio_info_t& info, const float* audio,
                     size_t len, netaudio_err_t& err);
 
 /**
- * @brief Decode an audio package into audio samples
+ * Decode an audio package into audio samples.
+ *
  * @param[in] info Netaudio info structure
  * @param[out] audio buffer to write audio samples into
  * @param[in] num_elem Space of sample buffer in elemens, must be fragsize *
@@ -144,16 +145,28 @@ size_t encode_audio(const netaudio_info_t& info, const float* audio,
  * @param[out] err Error code in case of failure
  * @return Number of Bytes used, or zero in case of failure
  *
- * This function may fail with the error code
- * netaudio_unsufficient_memory if the size of the memory area is not
- * large enough to read an encoded audio chunk, with
- * netaudio_no_audiochunk if the data is not containing an audio
- * chunk, or with netaudio_invalid_checksum if the checksum is
- * invalid.
+ * This function may fail with these error codes:
+ * - netaudio_invalid_pointer: the data or audio pointer is not valid
+ * - netaudio_unsufficient_memory: the size of the memory area is not
+ * large enough to read an encoded audio chunk
+ * - netaudio_no_audiochunk: the data is not containing an audio
+ * chunk
+ * - netaudio_invalid_checksum: the checksum is invalid
+ * - netaudio_invalid_buffer_dimensions: num_elem is not fragsize * channels
  */
 size_t decode_audio(const netaudio_info_t& info, float* audio, size_t num_elem,
                     size_t& sample_index, const char* data, size_t len,
                     netaudio_err_t& err);
+
+/**
+ * Return the maximum buffer length required to store one audio chunk.
+ *
+ * The returned number includes space required for control data.
+ *
+ * @param[in] info Netaudio info structure
+ * @return Number of Bytes needed
+ */
+size_t get_buffer_length(const netaudio_info_t& info);
 
 #endif
 
