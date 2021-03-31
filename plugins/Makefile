@@ -79,6 +79,8 @@ testjack:
 gtest:
 	$(MAKE) googlemock
 
+unit-tests: gtest
+
 googlemock: $(BUILD_DIR)/googlemock.is_installed
 
 $(BUILD_DIR)/googlemock.is_installed: googletest/WORKSPACE \
@@ -96,8 +98,6 @@ googletest/WORKSPACE:
 
 $(BUILD_DIR)/unit-test-runner: $(OBJECTS) $(BUILD_DIR)/.directory $(unit_tests_test_files) $(patsubst %_unit_tests.cpp, %.cpp , $(unit_tests_test_files))
 	if test -n "$(unit_tests_test_files)"; then $(CXX) $(CXXFLAGS) -I$(BUILD_DIR)/include -L$(BUILD_DIR)/lib --coverage -o $@ $(wordlist 2, $(words $^), $^) $(LDFLAGS) $(LDLIBS) $(OBJECTS) -lgmock_main -lpthread; fi
-
-
 
 .PHONY: doc
 

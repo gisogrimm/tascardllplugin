@@ -1,6 +1,9 @@
 #include "netaudio.h"
 #include <string.h>
 
+#define NETAUDIO_HEADER 1
+#define NETAUDIO_AUDIO 2
+
 #define CRC16 0x8005
 
 uint16_t gen_crc16(const uint8_t* data, uint16_t size)
@@ -83,48 +86,104 @@ netaudio_info_t new_netaudio_info(double srate, samplefmt_t samplefmt,
   info.samplefmt = samplefmt;
   info.channels = channels;
   info.fragsize = fragsize;
-  info.chksum = gen_crc32b((uint8_t*)(&info),sizeof(info));
+  info.chksum = gen_crc32b((uint8_t*)(&info), sizeof(info));
   return info;
 }
 
 size_t encode_header(const netaudio_info_t& info, char* data, size_t len,
                      netaudio_err_t& err)
 {
-  if( !data ){
+  if(!data) {
     err = netaudio_invalid_pointer;
     return 0u;
   }
-  if( len < sizeof(netaudio_info_t)+1 ){
+  if(len < sizeof(netaudio_info_t) + 1) {
     err = netaudio_unsufficient_memory;
     return 0u;
   }
   data[0] = 1;
-  memcpy(&(data[1]),&info,sizeof(netaudio_info_t));
+  memcpy(&(data[1]), &info, sizeof(netaudio_info_t));
   err = netaudio_success;
-  return 0u;
+  return sizeof(netaudio_info_t) + 1;
 }
 
 size_t decode_header(netaudio_info_t& info, const char* data, size_t len,
                      netaudio_err_t& err)
 {
-  if( !data ){
+  if(!data) {
     err = netaudio_invalid_pointer;
     return 0u;
   }
-  if( len < sizeof(netaudio_info_t)+1 ){
+  if(len < sizeof(netaudio_info_t) + 1) {
     err = netaudio_unsufficient_memory;
     return 0u;
   }
-  err = netaudio_generic_error;
-  return 0;
+  if(data[0] != NETAUDIO_HEADER) {
+    err = netaudio_not_a_header;
+    return 0u;
+  }
+  netaudio_info_t newinfo;
+  memcpy(&newinfo, &(data[1]), sizeof(netaudio_info_t));
+  netaudio_info_t validinfo(new_netaudio_info(
+      newinfo.srate, newinfo.samplefmt, newinfo.channels, newinfo.fragsize));
+  if(validinfo.id != newinfo.id) {
+    err = netaudio_unsupported_protocol_version;
+    return 0u;
+  }
+  if(validinfo.chksum != newinfo.chksum) {
+    err = netaudio_invalid_checksum;
+    return 0u;
+  }
+  info = newinfo;
+  return sizeof(netaudio_info_t) + 1;
 }
 
 size_t encode_audio(const netaudio_info_t& info, const float* audio,
                     size_t num_elem, size_t sample_index, char* data,
                     size_t len, netaudio_err_t& err)
 {
-  err = netaudio_generic_error;
-  return 0;
+  if(!audio) {
+    err = netaudio_invalid_pointer;
+    return 0u;
+  }
+  if(!data) {
+    err = netaudio_invalid_pointer;
+    return 0u;
+  }
+  if(num_elem != info.fragsize * info.channels) {
+    err = netaudio_invalid_buffer_dimensions;
+    return 0u;
+  }
+  size_t requiredlen;
+  switch(info.samplefmt) {
+  case pcm16bit:
+    requiredlen = num_elem * sizeof(int16_t);
+    break;
+  case pcmfloat:
+    requiredlen = num_elem * sizeof(float);
+    break;
+  }
+  if(len < requiredlen + 1 + sizeof(info.chksum)) {
+    err = netaudio_unsufficient_memory;
+    return 0u;
+  }
+  data[0] = NETAUDIO_AUDIO;
+  memcpy(&(data[1]), &(info.chksum), sizeof(info.chksum));
+  data += 1 + sizeof(info.chksum);
+  switch(info.samplefmt) {
+  case pcm16bit:
+    for(size_t k = 0; k < num_elem; ++k) {
+      int16_t v(audio[k] * ((1 << 15) - 1));
+      memcpy(data, &v, sizeof(int16_t));
+      data += sizeof(int16_t);
+    }
+    break;
+  case pcmfloat:
+    memcpy(data, audio, sizeof(float) * num_elem);
+    break;
+  }
+  err = netaudio_success;
+  return requiredlen + 1 + sizeof(info.chksum);
 }
 
 size_t decode_audio(const netaudio_info_t& info, float* audio, size_t num_elem,
