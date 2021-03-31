@@ -104,6 +104,79 @@ TEST(netaudio, encode_audio_errors)
   EXPECT_EQ(netaudio_success, err);
 }
 
+TEST(netaudio, decode_audio_errors)
+{
+  netaudio_info_t info(new_netaudio_info(44100, pcm16bit, 2, 8));
+  size_t size;
+  float f1[1];
+  f1[0] = 0;
+  float f16[16];
+  for(size_t k = 0; k < 16; ++k)
+    f16[k] = 0.01 * k;
+  char char1k[1024];
+  char char18[18];
+  netaudio_err_t err;
+  size_t sample_index(1);
+  size = decode_audio(info, NULL, 128, sample_index, char1k, 1024, err);
+  EXPECT_EQ(0u, size);
+  EXPECT_EQ(netaudio_invalid_pointer, err);
+  size = decode_audio(info, f16, 16, sample_index, NULL, 1024, err);
+  EXPECT_EQ(0u, size);
+  EXPECT_EQ(netaudio_invalid_pointer, err);
+  size = decode_audio(info, f16, 16, sample_index, char18, 18, err);
+  EXPECT_EQ(0u, size);
+  EXPECT_EQ(netaudio_unsufficient_memory, err);
+  size = decode_audio(info, f16, 16, sample_index,
+                      "01234567890123456789012345678901234567890123456789012345"
+                      "678901234567890123456789",
+                      80, err);
+  EXPECT_EQ(0u, size);
+  EXPECT_EQ(netaudio_no_audiochunk, err);
+  size = decode_audio(info, f1, 1, sample_index, char18, 18, err);
+  EXPECT_EQ(0u, size);
+  EXPECT_EQ(netaudio_invalid_buffer_dimensions, err);
+  /* not tested:
+   * - netaudio_invalid_checksum: the checksum is invalid
+   */
+}
+
+TEST(netaudio, encode_decode_audio)
+{
+  netaudio_info_t info(new_netaudio_info(44100, pcm16bit, 2, 8));
+  size_t size;
+  float f16[16];
+  float f16b[16];
+  for(size_t k = 0; k < 16; ++k)
+    f16[k] = 0.01f * k;
+  char char1k[1024];
+  netaudio_err_t err;
+  size_t sample_index(1);
+  size = encode_audio(info, f16, 16, sample_index, char1k, 1024, err);
+  size_t size2;
+  size2 = decode_audio(info, f16b, 16, sample_index, char1k, size, err);
+  EXPECT_EQ(netaudio_success, err);
+  EXPECT_EQ(size, size2);
+  EXPECT_EQ(f16[0], f16b[0]);
+  for(size_t k = 1; k < 16; ++k) {
+    ASSERT_NEAR(f16[k], f16b[k], 1.0 / (1 << 15));
+  }
+  char1k[2]++;
+  size2 = decode_audio(info, f16b, 16, sample_index, char1k, size, err);
+  EXPECT_EQ(0u, size2);
+  EXPECT_EQ(netaudio_invalid_checksum, err);
+}
+
+TEST(netaudio, get_buffer_length)
+{
+  netaudio_info_t info;
+  info = new_netaudio_info(44100, pcm16bit, 2, 8);
+  EXPECT_EQ(37u, get_buffer_length(info));
+  info = new_netaudio_info(44100, pcmfloat, 2, 8);
+  EXPECT_EQ(69u, get_buffer_length(info));
+  info = new_netaudio_info(44100, pcm16bit, 1, 1);
+  EXPECT_EQ(7u, get_buffer_length(info));
+}
+
 // Local Variables:
 // compile-command: "make -C .. unit-tests"
 // coding: utf-8-unix
