@@ -31,16 +31,16 @@ CXXFLAGS += `pkg-config --cflags $(EXTERNALS)`
 LDLIBS += -ltascar
 
 # build targets:
-BUILDMODS = $(patsubst %,$(BUILD_DIR)/%.so,$(PLUGINS))
+BUILDPLUGINS = $(patsubst %,$(BUILD_DIR)/%.so,$(PLUGINS))
 
 # install targets:
-INSTMODS = $(patsubst %,$(PREFIX)/lib/%.so,$(PLUGINS))
+INSTPLUGINS = $(patsubst %,$(PREFIX)/lib/%.so,$(PLUGINS))
 
 OBJECTS = $(BUILD_DIR)/netaudio.o
 
-modules: $(BUILDMODS)
+modules: $(BUILDPLUGINS)
 
-install: $(INSTMODS)
+install: $(INSTPLUGINS)
 
 uninstall:
 	rm -f $(INSTMOD)
@@ -60,11 +60,11 @@ $(BUILD_DIR)/%.o: src/%.cc $(wildcard src/*.h)
 $(BUILD_DIR)/%.so: src/%.cc $(wildcard src/*.h) $(OBJECTS)
 	$(CXX) -shared -fpic -o $@ $< $(OBJECTS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
 
-%.validated: %.tsc $(BUILDMODS)
+%.validated: %.tsc $(BUILDPLUGINS)
 	LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:$(PWD)/$(BUILD_DIR) tascar_validatetsc $< || (echo "$(<):1:";false)
 	echo ok > $@
 
-%.jvalid: %.tsc $(BUILDMODS)
+%.jvalid: %.tsc $(BUILDPLUGINS)
 	LD_LIBRARY_PATH=$${LD_LIBRARY_PATH}:$(PWD)/$(BUILD_DIR) tascar_cli -v $<  || (echo "$(<):1:";false)
 	echo ok > $@
 
@@ -97,7 +97,7 @@ googletest/WORKSPACE:
 	(cd googletest && git checkout 31eb5e9b873af4b509be2f77616113007fa0de9d)
 
 $(BUILD_DIR)/unit-test-runner: $(OBJECTS) $(BUILD_DIR)/.directory $(unit_tests_test_files) $(patsubst %_unit_tests.cpp, %.cpp , $(unit_tests_test_files))
-	if test -n "$(unit_tests_test_files)"; then $(CXX) $(CXXFLAGS) -I$(BUILD_DIR)/include -L$(BUILD_DIR)/lib --coverage -o $@ $(wordlist 2, $(words $^), $^) $(LDFLAGS) $(LDLIBS) $(OBJECTS) -lgmock_main -lpthread; fi
+	if test -n "$(unit_tests_test_files)"; then $(CXX) $(CXXFLAGS) -I$(BUILD_DIR)/include -L$(BUILD_DIR)/lib -o $@ $(wordlist 2, $(words $^), $^) $(LDFLAGS) $(LDLIBS) $(OBJECTS) -lgmock_main -lpthread; fi
 
 .PHONY: doc
 

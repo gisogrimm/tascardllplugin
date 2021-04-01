@@ -1,8 +1,8 @@
 #include "netaudio.h"
 #include <string.h>
 
-#define NETAUDIO_HEADER 1
-#define NETAUDIO_AUDIO 2
+#define NETAUDIO_HEADER '\001'
+#define NETAUDIO_AUDIO '\002'
 
 #define CRC16 0x8005
 
@@ -76,6 +76,12 @@ uint32_t gen_crc32b(const uint8_t* data, uint16_t size)
   return ~crc;
 }
 
+uint32_t get_checksum(netaudio_info_t info)
+{
+  info.chksum = 0;
+  return gen_crc32b((uint8_t*)(&info), sizeof(info));
+}
+
 netaudio_info_t new_netaudio_info(double srate, samplefmt_t samplefmt,
                                   uint16_t channels, uint32_t fragsize)
 {
@@ -86,7 +92,7 @@ netaudio_info_t new_netaudio_info(double srate, samplefmt_t samplefmt,
   info.samplefmt = samplefmt;
   info.channels = channels;
   info.fragsize = fragsize;
-  info.chksum = gen_crc32b((uint8_t*)(&info), sizeof(info));
+  info.chksum = get_checksum(info);
   return info;
 }
 
@@ -97,13 +103,19 @@ size_t encode_header(const netaudio_info_t& info, char* data, size_t len,
     err = netaudio_invalid_pointer;
     return 0u;
   }
-  if(len < sizeof(netaudio_info_t) + 1) {
-    err = netaudio_unsufficient_memory;
+  if(len < get_buffer_length_header()) {
+    err = netaudio_insufficient_memory;
     return 0u;
   }
-  data[0] = 1;
+  // mark data block to be a header:
+  data[0] = NETAUDIO_HEADER;
   memcpy(&(data[1]), &info, sizeof(netaudio_info_t));
   err = netaudio_success;
+  return sizeof(netaudio_info_t) + 1;
+}
+
+size_t get_buffer_length_header()
+{
   return sizeof(netaudio_info_t) + 1;
 }
 
@@ -115,7 +127,7 @@ size_t decode_header(netaudio_info_t& info, const char* data, size_t len,
     return 0u;
   }
   if(len < sizeof(netaudio_info_t) + 1) {
-    err = netaudio_unsufficient_memory;
+    err = netaudio_insufficient_memory;
     return 0u;
   }
   if(data[0] != NETAUDIO_HEADER) {
@@ -124,17 +136,16 @@ size_t decode_header(netaudio_info_t& info, const char* data, size_t len,
   }
   netaudio_info_t newinfo;
   memcpy(&newinfo, &(data[1]), sizeof(netaudio_info_t));
-  netaudio_info_t validinfo(new_netaudio_info(
-      newinfo.srate, newinfo.samplefmt, newinfo.channels, newinfo.fragsize));
-  if(validinfo.id != newinfo.id) {
-    err = netaudio_unsupported_protocol_version;
-    return 0u;
-  }
-  if(validinfo.chksum != newinfo.chksum) {
+  if(get_checksum(newinfo) != newinfo.chksum) {
     err = netaudio_invalid_checksum;
     return 0u;
   }
+  if(1 != newinfo.id) {
+    err = netaudio_unsupported_protocol_version;
+    return 0u;
+  }
   info = newinfo;
+  err = netaudio_success;
   return sizeof(netaudio_info_t) + 1;
 }
 
@@ -156,7 +167,7 @@ size_t encode_audio(const netaudio_info_t& info, const float* audio,
   }
   size_t requiredlen(get_buffer_length(info));
   if(len < requiredlen) {
-    err = netaudio_unsufficient_memory;
+    err = netaudio_insufficient_memory;
     return 0u;
   }
   data[0] = NETAUDIO_AUDIO;
@@ -196,7 +207,7 @@ size_t decode_audio(const netaudio_info_t& info, float* audio, size_t num_elem,
   }
   size_t requiredlen(get_buffer_length(info));
   if(len < requiredlen) {
-    err = netaudio_unsufficient_memory;
+    err = netaudio_insufficient_memory;
     return 0u;
   }
   if(data[0] != NETAUDIO_AUDIO) {
