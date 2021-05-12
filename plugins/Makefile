@@ -28,7 +28,8 @@ EXTERNALS = libxml++-2.6
 LDLIBS += `pkg-config --libs $(EXTERNALS)`
 CXXFLAGS += `pkg-config --cflags $(EXTERNALS)`
 
-LDLIBS += -ltascar
+LDLIBS += -ltascar -lovserver
+CXXFLAGS += -Llibov/build -Ilibov/src
 
 # build targets:
 BUILDPLUGINS = $(patsubst %,$(BUILD_DIR)/%.so,$(PLUGINS))
@@ -40,6 +41,8 @@ OBJECTS = $(BUILD_DIR)/netaudio.o
 
 modules: $(BUILDPLUGINS)
 
+$(BUILDPLUGINS): libovserver
+
 install: $(INSTPLUGINS)
 
 uninstall:
@@ -50,6 +53,7 @@ clean:
 	find -name "*.jvalid" -exec rm -f \{\} \;
 	find -name "*.validated" -exec rm -f \{\} \;
 	rm -Rf googlemock googletest $(BUILD_DIR)
+	rm -Rf libov/build
 
 $(PREFIX)/lib/%: $(BUILD_DIR)/%
 	cp $< $@
@@ -103,6 +107,9 @@ $(BUILD_DIR)/unit-test-runner: $(OBJECTS) $(BUILD_DIR)/.directory $(unit_tests_t
 
 doc:
 	cd doc && doxygen doxygen.cfg
+
+libovserver:
+	$(MAKE) -C libov build libovserver
 
 
 # Local Variables:

@@ -1,0 +1,3 @@
+[submodule "plugins/libov"]
+	path = plugins/libov
+	url = git@github.com:gisogrimm/libov.git
