@@ -2,6 +2,8 @@
 
 #include "netaudio.h"
 
+#define BUFSIZE 4096
+
 TEST(netaudio, new_netaudio_info)
 {
   netaudio_info_t inf(new_netaudio_info(44100, pcm16bit, 2, 64));
@@ -131,7 +133,7 @@ TEST(netaudio, decode_audio_errors)
   char char1k[1024];
   char char18[18];
   netaudio_err_t err;
-  size_t sample_index(1);
+  uint32_t sample_index(1);
   err = netaudio_success;
   size = decode_audio(info, NULL, 128, sample_index, char1k, 1024, err);
   EXPECT_EQ(0u, size);
@@ -169,7 +171,7 @@ TEST(netaudio, encode_decode_audio)
     f16[k] = 0.01f * k;
   char char1k[1024];
   netaudio_err_t err;
-  size_t sample_index(1);
+  uint32_t sample_index(1);
   size = encode_audio(info, f16, 16, sample_index, char1k, 1024, err);
   size_t size2;
   err = netaudio_invalid_checksum;
@@ -191,11 +193,11 @@ TEST(netaudio, get_buffer_length)
 {
   netaudio_info_t info;
   info = new_netaudio_info(44100, pcm16bit, 2, 8);
-  EXPECT_EQ(37u, get_buffer_length(info));
+  EXPECT_EQ(41u, get_buffer_length(info));
   info = new_netaudio_info(44100, pcmfloat, 2, 8);
-  EXPECT_EQ(69u, get_buffer_length(info));
+  EXPECT_EQ(73u, get_buffer_length(info));
   info = new_netaudio_info(44100, pcm16bit, 1, 1);
-  EXPECT_EQ(7u, get_buffer_length(info));
+  EXPECT_EQ(11u, get_buffer_length(info));
 }
 
 TEST(netaudio, crc32)
@@ -229,6 +231,42 @@ TEST(netaudio, crc32)
   info.id++;
   checksum2 = get_checksum(info);
   EXPECT_NE(checksum1, checksum2);
+}
+
+TEST(netaudio, sampleindex)
+{
+  netaudio_info_t info(new_netaudio_info(44100, pcmfloat, 2, 8));
+  float audio[16] = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f,
+                     1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f};
+  char buffer[BUFSIZE];
+  netaudio_err_t err = netaudio_invalid_checksum;
+  size_t encsize = encode_audio(info, audio, 16, 12, buffer, BUFSIZE, err);
+  EXPECT_EQ(netaudio_success, err);
+  if(err == netaudio_success) {
+    memset(audio, 0, sizeof(float) * 16);
+    uint32_t sample_index = 0;
+    decode_audio(info, audio, 16, sample_index, buffer, encsize, err);
+    EXPECT_EQ(netaudio_success, err);
+    if(err == netaudio_success) {
+      EXPECT_EQ(12u, sample_index);
+      EXPECT_EQ(1.0f, audio[0]);
+      EXPECT_EQ(2.0f, audio[1]);
+      EXPECT_EQ(3.0f, audio[2]);
+      EXPECT_EQ(4.0f, audio[3]);
+      EXPECT_EQ(5.0f, audio[4]);
+      EXPECT_EQ(6.0f, audio[5]);
+      EXPECT_EQ(7.0f, audio[6]);
+      EXPECT_EQ(8.0f, audio[7]);
+      EXPECT_EQ(1.0f, audio[8]);
+      EXPECT_EQ(2.0f, audio[9]);
+      EXPECT_EQ(3.0f, audio[10]);
+      EXPECT_EQ(4.0f, audio[11]);
+      EXPECT_EQ(5.0f, audio[12]);
+      EXPECT_EQ(6.0f, audio[13]);
+      EXPECT_EQ(7.0f, audio[14]);
+      EXPECT_EQ(8.0f, audio[15]);
+    }
+  }
 }
 
 // Local Variables:

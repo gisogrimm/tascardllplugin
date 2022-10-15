@@ -28,13 +28,13 @@ private:
   size_t cyclecounter;
   netaudio_err_t errcode;
   float* audiobuffer;
-  size_t sample_index;
+  uint32_t sample_index;
 };
 
 // default constructor, called while loading the plugin
 udpsend_t::udpsend_t(const TASCAR::audioplugin_cfg_t& cfg)
     : audioplugin_base_t(cfg), host("localhost"), port(0), cbuffer(NULL),
-      cbufferlen(0), cyclecounter(0), audiobuffer(NULL), sample_index(0)
+      cbufferlen(0), cyclecounter(0), audiobuffer(NULL), sample_index(random())
 {
   // register variable for XML access:
   GET_ATTRIBUTE(host, "", "destination host");

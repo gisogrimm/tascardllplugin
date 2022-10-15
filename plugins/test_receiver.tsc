@@ -10,8 +10,7 @@
     </route>
     <route name="receive" channels="2">
       <plugins>
-        <sine f="100" a="70"/>
-        <udpreceive host="localhost" port="9876"/>
+        <udpreceive port="9876"/>
       </plugins>
     </route>
   </modules>

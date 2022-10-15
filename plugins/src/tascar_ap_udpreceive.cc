@@ -1,5 +1,6 @@
 #include "netaudio.h"
 #include <tascar/audioplugin.h>
+#include <thread>
 #include <udpsocket.h>
 
 /*
@@ -19,6 +20,9 @@ public:
   void release();
 
 private:
+  void recsrv();
+  std::thread recthread;
+  std::atomic_bool runsession = true;
   udpsocket_t socket;
   int32_t port;
   netaudio_info_t info;
@@ -37,7 +41,8 @@ udpreceive_t::udpreceive_t(const TASCAR::audioplugin_cfg_t& cfg)
 {
   // register variable for XML access:
   GET_ATTRIBUTE(port, "", "destination port number");
-  socket.bind(port);
+  socket.set_timeout_usec(10000);
+  socket.bind(port, true);
 }
 
 void udpreceive_t::configure()
@@ -48,10 +53,56 @@ void udpreceive_t::configure()
   cbuffer = new char[cbufferlen];
   cyclecounter = 0;
   audiobuffer = new float[n_channels * n_fragment];
+  runsession = true;
+  recthread = std::thread(&udpreceive_t::recsrv, this);
+}
+
+void udpreceive_t::recsrv()
+{
+  char buffer[BUFSIZE];
+  float* audio = NULL;
+  size_t audio_numelem = 0;
+  endpoint_t sender_endpoint;
+  netaudio_info_t info;
+  bool has_info = false;
+  uint32_t sample_index = 0;
+  while(runsession) {
+    ssize_t n = socket.recvfrom(buffer, BUFSIZE, sender_endpoint);
+    if(n > 0) {
+      netaudio_err_t err;
+      size_t recbytes = decode_header(info, buffer, n, err);
+      if(err == netaudio_success) {
+        DEBUG(info.id);
+        DEBUG(info.samplefmt);
+        DEBUG(info.srate);
+        DEBUG(info.channels);
+        DEBUG(info.fragsize);
+        if(audio_numelem != info.channels * info.fragsize) {
+          audio_numelem = info.channels * info.fragsize;
+          if(audio)
+            delete[] audio;
+          audio = new float[audio_numelem];
+        }
+        has_info = true;
+      } else {
+        if(has_info) {
+          recbytes = decode_audio(info, audio, audio_numelem, sample_index,
+                                  buffer, n, err);
+          if(err == netaudio_success) {
+            DEBUG(sample_index);
+          }
+        }
+      }
+    }
+  }
+  if(audio)
+    delete[] audio;
 }
 
 void udpreceive_t::release()
 {
+  runsession = false;
+  recthread.join();
   delete[] cbuffer;
   delete[] audiobuffer;
   TASCAR::audioplugin_base_t::release();
