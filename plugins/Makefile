@@ -15,7 +15,7 @@ PLUGINS += tascar_ap_udpsend tascar_ap_udpreceive
 # list of test files
 TESTFILES = $(shell find ./test/ -name "*.tsc")
 
-all: $(BUILD_DIR) modules
+all: build modules
 
 # include compiler configuration to ensure ABI compatibility:
 include /usr/share/tascar/config.mk
