@@ -150,7 +150,7 @@ size_t decode_header(netaudio_info_t& info, const char* data, size_t len,
 }
 
 size_t encode_audio(const netaudio_info_t& info, const float* audio,
-                    size_t num_elem, size_t sample_index, char* data,
+                    size_t num_elem, uint32_t sample_index, char* data,
                     size_t len, netaudio_err_t& err)
 {
   if(!audio) {
@@ -173,6 +173,8 @@ size_t encode_audio(const netaudio_info_t& info, const float* audio,
   data[0] = NETAUDIO_AUDIO;
   memcpy(&(data[1]), &(info.chksum), sizeof(info.chksum));
   data += 1 + sizeof(info.chksum);
+  memcpy(data,&sample_index,sizeof(uint32_t));
+  data += 4u;
   switch(info.samplefmt) {
   case pcm16bit:
     for(size_t k = 0; k < num_elem; ++k) {
@@ -190,7 +192,7 @@ size_t encode_audio(const netaudio_info_t& info, const float* audio,
 }
 
 size_t decode_audio(const netaudio_info_t& info, float* audio, size_t num_elem,
-                    size_t& sample_index, const char* data, size_t len,
+                    uint32_t& sample_index, const char* data, size_t len,
                     netaudio_err_t& err)
 {
   if(!audio) {
@@ -221,6 +223,8 @@ size_t decode_audio(const netaudio_info_t& info, float* audio, size_t num_elem,
     return 0u;
   }
   data += 1 + sizeof(chksum);
+  memcpy(&sample_index,data,sizeof(uint32_t));
+  data += 4u;
   switch(info.samplefmt) {
   case pcm16bit:
     for(size_t k = 0; k < num_elem; ++k) {
@@ -249,7 +253,7 @@ size_t get_buffer_length(const netaudio_info_t& info)
     requiredlen = info.channels * info.fragsize * sizeof(float);
     break;
   }
-  return requiredlen + 1 + sizeof(info.chksum);
+  return requiredlen + 1 + sizeof(info.chksum) + 4;
 }
 
 /*

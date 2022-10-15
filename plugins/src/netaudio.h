@@ -129,7 +129,7 @@ size_t decode_header(netaudio_info_t& info, const char* data, size_t len,
  * - netaudio_invalid_buffer_dimensions: num_elem is not fragsize * channels
  */
 size_t encode_audio(const netaudio_info_t& info, const float* audio,
-                    size_t num_elem, size_t sample_index, char* data,
+                    size_t num_elem, uint32_t sample_index, char* data,
                     size_t len, netaudio_err_t& err);
 
 /**
@@ -155,7 +155,7 @@ size_t encode_audio(const netaudio_info_t& info, const float* audio,
  * - netaudio_invalid_buffer_dimensions: num_elem is not fragsize * channels
  */
 size_t decode_audio(const netaudio_info_t& info, float* audio, size_t num_elem,
-                    size_t& sample_index, const char* data, size_t len,
+                    uint32_t& sample_index, const char* data, size_t len,
                     netaudio_err_t& err);
 
 /**
