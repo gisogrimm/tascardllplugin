@@ -20,7 +20,6 @@ public:
 
 private:
   udpsocket_t socket;
-  std::string host;
   int32_t port;
   netaudio_info_t info;
   char* cbuffer;
@@ -33,18 +32,17 @@ private:
 
 // default constructor, called while loading the plugin
 udpreceive_t::udpreceive_t(const TASCAR::audioplugin_cfg_t& cfg)
-    : audioplugin_base_t(cfg), host("localhost"), port(0), cbuffer(NULL),
-      cbufferlen(0), cyclecounter(0), audiobuffer(NULL), sample_index(0)
+    : audioplugin_base_t(cfg), port(0), cbuffer(NULL), cbufferlen(0),
+      cyclecounter(0), audiobuffer(NULL), sample_index(0)
 {
   // register variable for XML access:
-  GET_ATTRIBUTE(host, "", "destination host");
   GET_ATTRIBUTE(port, "", "destination port number");
   socket.bind(port);
-  socket.set_destination(host.c_str());
 }
 
 void udpreceive_t::configure()
 {
+  TASCAR::audioplugin_base_t::configure();
   info = new_netaudio_info(f_sample, pcm16bit, n_channels, n_fragment);
   cbufferlen = std::max(get_buffer_length_header(), get_buffer_length(info));
   cbuffer = new char[cbufferlen];
@@ -56,31 +54,16 @@ void udpreceive_t::release()
 {
   delete[] cbuffer;
   delete[] audiobuffer;
+  TASCAR::audioplugin_base_t::release();
 }
 
 udpreceive_t::~udpreceive_t() {}
 
 void udpreceive_t::ap_process(std::vector<TASCAR::wave_t>& chunk,
-                           const TASCAR::pos_t& pos,
-                           const TASCAR::zyx_euler_t& o,
-                           const TASCAR::transport_t& tp)
+                              const TASCAR::pos_t& pos,
+                              const TASCAR::zyx_euler_t& o,
+                              const TASCAR::transport_t& tp)
 {
-  // implement the algrithm:
-  if(!cyclecounter) {
-    cyclecounter = std::max(1.0, f_fragment);
-    size_t codedbytes(encode_header(info, cbuffer, cbufferlen, errcode));
-    socket.send(cbuffer, codedbytes, port);
-    // ignore errors for now.
-  } else {
-    --cyclecounter;
-  }
-  for(size_t k = 0; k < n_fragment; ++k)
-    for(size_t c = 0; c < n_channels; ++c)
-      audiobuffer[c + n_channels * k] = chunk[c][k];
-  size_t codedbytes(encode_audio(info, audiobuffer, n_fragment * n_channels,
-                                 sample_index, cbuffer, cbufferlen, errcode));
-  sample_index += n_fragment;
-  socket.send(cbuffer, codedbytes, port);
 }
 
 // create the plugin interface:

@@ -39,12 +39,12 @@ udpsend_t::udpsend_t(const TASCAR::audioplugin_cfg_t& cfg)
   // register variable for XML access:
   GET_ATTRIBUTE(host, "", "destination host");
   GET_ATTRIBUTE(port, "", "destination port number");
-  socket.bind(port);
   socket.set_destination(host.c_str());
 }
 
 void udpsend_t::configure()
 {
+  TASCAR::audioplugin_base_t::configure();
   info = new_netaudio_info(f_sample, pcm16bit, n_channels, n_fragment);
   cbufferlen = std::max(get_buffer_length_header(), get_buffer_length(info));
   cbuffer = new char[cbufferlen];
@@ -56,14 +56,14 @@ void udpsend_t::release()
 {
   delete[] cbuffer;
   delete[] audiobuffer;
+  TASCAR::audioplugin_base_t::release();
 }
 
 udpsend_t::~udpsend_t() {}
 
 void udpsend_t::ap_process(std::vector<TASCAR::wave_t>& chunk,
-                           const TASCAR::pos_t& pos,
-                           const TASCAR::zyx_euler_t& o,
-                           const TASCAR::transport_t& tp)
+                           const TASCAR::pos_t&, const TASCAR::zyx_euler_t&,
+                           const TASCAR::transport_t&)
 {
   // implement the algrithm:
   if(!cyclecounter) {

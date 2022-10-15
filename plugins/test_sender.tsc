@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<session license="CC0">
+  <scene/>
+  <modules>
+    <route name="send" channels="2">
+      <plugins>
+        <sine f="100" a="70"/>
+        <udpsend host="localhost" port="9876"/>
+      </plugins>
+    </route>
+  </modules>
+</session>
