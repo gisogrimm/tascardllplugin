@@ -3,6 +3,50 @@
 #include <thread>
 #include <udpsocket.h>
 
+class ringbuffer_ooowrite_t {
+public:
+  ringbuffer_ooowrite_t(size_t frames, size_t channels);
+  ~ringbuffer_ooowrite_t();
+  void write_data(float* audio, size_t wframes, size_t wchannels,
+                  size_t sample_index);
+  inline size_t rspace() const
+  {
+    if(wpos > rpos)
+      return wpos - rpos - 1;
+    return frames + wpos - rpos - 1;
+  };
+  inline size_t wspace() const
+  {
+    if(rpos > wpos)
+      return rpos - wpos - 1;
+    return frames + rpos - wpos - 1;
+  };
+
+private:
+  size_t frames = 1;
+  size_t channels = 1;
+  float* data = NULL;
+  size_t wpos = 1;
+  size_t rpos = 0;
+};
+
+ringbuffer_ooowrite_t::ringbuffer_ooowrite_t(size_t frames, size_t channels)
+    : frames(frames), channels(channels)
+{
+  data = new float[std::max((size_t)1u, frames * channels)];
+}
+
+ringbuffer_ooowrite_t::~ringbuffer_ooowrite_t()
+{
+  delete[] data;
+}
+
+void ringbuffer_ooowrite_t::write_data(float* audio, size_t wframes,
+                                       size_t wchannels, size_t sample_index)
+{
+  sample_index = sample_index % frames;
+}
+
 /*
   This example implements an audio plugin which is a white noise
   generator.

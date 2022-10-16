@@ -21,7 +21,10 @@ all: build modules
 include /usr/share/tascar/config.mk
 
 # include TASCAR specific make rules:
-include /usr/share/tascar/rules.mk
+#include /usr/share/tascar/rules.mk
+%: force
+	@$(MAKE) -f /usr/share/tascar/rules.mk
+force: ;
 
 EXTERNALS = libxml++-2.6
 
