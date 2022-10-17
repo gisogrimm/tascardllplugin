@@ -68,20 +68,20 @@ private:
   std::thread recthread;
   std::atomic_bool runsession = true;
   udpsocket_t socket;
-  int32_t port;
+  int32_t port = 0;
   netaudio_info_t info;
-  char* cbuffer;
-  size_t cbufferlen;
-  size_t cyclecounter;
+  char* cbuffer = NULL;
+  size_t cbufferlen = 0;
+  size_t cyclecounter = 0;
   netaudio_err_t errcode;
-  float* audiobuffer;
-  size_t sample_index;
+  float* audiobuffer = NULL;
+  uint32_t sample_index = 0;
+  uint32_t prev_sampleidx = 0;
 };
 
 // default constructor, called while loading the plugin
 udpreceive_t::udpreceive_t(const TASCAR::audioplugin_cfg_t& cfg)
-    : audioplugin_base_t(cfg), port(0), cbuffer(NULL), cbufferlen(0),
-      cyclecounter(0), audiobuffer(NULL), sample_index(0)
+    : audioplugin_base_t(cfg)
 {
   // register variable for XML access:
   GET_ATTRIBUTE(port, "", "destination port number");
@@ -110,6 +110,12 @@ void udpreceive_t::recsrv()
   netaudio_info_t info;
   bool has_info = false;
   uint32_t sample_index = 0;
+  double c = 0.999;
+  double w_samplecnt = 1.0;
+  double w_duration = 1.0;
+  float nominalsrate = -1;
+  TASCAR::tictoc_t tictoc;
+  // tictoc.tic();
   while(runsession) {
     ssize_t n = socket.recvfrom(buffer, BUFSIZE, sender_endpoint);
     if(n > 0) {
@@ -121,6 +127,11 @@ void udpreceive_t::recsrv()
         DEBUG(info.srate);
         DEBUG(info.channels);
         DEBUG(info.fragsize);
+        if(info.srate != nominalsrate) {
+          nominalsrate = info.srate;
+          w_samplecnt = nominalsrate;
+          w_duration = 1.0;
+        }
         if(audio_numelem != info.channels * info.fragsize) {
           audio_numelem = info.channels * info.fragsize;
           if(audio)
@@ -133,7 +144,23 @@ void udpreceive_t::recsrv()
           recbytes = decode_audio(info, audio, audio_numelem, sample_index,
                                   buffer, n, err);
           if(err == netaudio_success) {
-            DEBUG(sample_index);
+            uint32_t samples = sample_index - prev_sampleidx;
+            prev_sampleidx = sample_index;
+            if((samples > 0) && (samples < 1 << 30)) {
+              // DEBUG(samples);
+              double dt = tictoc.tictoc();
+              // c = 1.0/(1.0+dt);
+              w_samplecnt *= c;
+              //w_samplecnt += (1.0 - c) * samples;
+              w_samplecnt += samples;
+              w_duration *= c;
+              //w_duration += (1.0 - c) * dt;
+              w_duration += dt;
+              std::cout << w_samplecnt << "  " << w_duration << "   "
+                        << w_samplecnt / w_duration << std::endl;
+              // DEBUG(w_samplecnt/w_duration);
+              // DEBUG(dt);
+            }
           }
         }
       }
